@@ -1,0 +1,15 @@
+?? JavaScript's Null Coalescing Operator
+
+This year ECMAScript 2020 (ES2020) will be released! Since ECMAScript 2015 (ES6) was released in 2015, we have gotten yearly updates to the JavaScript language.
+In ES2020, we are getting a feature that has been available in other languages like C# and PHP: null coalescing operator. 
+The null coalescing operator will go through a list and return the first item that is not null or undefined.
+
+
+LCH colors in CSS: what, why, and how?
+
+CSS Color 4 defines lch() colors, among other things, and as of recently, all major browsers have started implementing them or are seriously considering it:
+Safari is already implementing,Chrome is about to, and Firefox is discussing it. LCH is a color space that has several advantages over the RGB/HSL colors we’re familiar with in CSS.
+
+
+GitHub Protips: Tips, tricks, hacks, and secrets from Jason Etcovitch
+
