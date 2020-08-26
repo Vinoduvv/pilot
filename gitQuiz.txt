@@ -1,0 +1,77 @@
+What does a commit range `branch1..branch2` mean?
+
+All commits that contain files changed between commits at branch1 and branch2
+All commits reachable from branch1, but not reachable from branch2
+All commits reachable from branch2, but not reachable from branch1 CORRECT
+All commits created in the period between commits at branch1 and branch2
+
+
+
+
+-------
+
+
+What is the difference between tags and branches in Git?
+
+
+
+
+
+
+Which of the following is not available as a Git Hook?
+
+
+
+
+When should you NOT run `git gc`?
+
+When working in someone else's branch
+When you plan to push to a remote
+In a sparse working tree
+When you have orphaned objects you want to restore CORRECT
+
+
+What can't be cryptographically signed in Git?
+
+Merge commits
+Regular Commits
+Branches  CORRECT
+Tags
+
+
+Where is a branch stored inside a Git repository?
+
+Inside .git/packed-refs file
+Inside .git/refs directory
+Inside either .git/branches file or .git/packed-refs file
+Inside either .git/refs directory or .git/packed-refs file  CORRECT
+
+
+
+How to reset or revert a file to a specific revision?
+
+git reset <hashValue> -- <fileToRestore>
+git checkout <hashValue> -- <fileToRestore>  CORRECT
+git revert <hashValue> -- <fileToRestore>
+git restore <hashValue> -- <fileToRestore>
+
+
+How to define a file that contains the default commit message to use for all commits?
+
+git config --global commit.template path/to/commit-message.txt
+git config --global commit.message path/to/commit-message.txt
+git config --global --commit.template = path/to/commit-message.txt
+git config commit.template path/to/commit-message.txt
+
+
+
+___________ can be used to change commit message of a specific commit.
+
+ammend
+rebase
+reset
+reflog
+
+
+How to issue pull requests from the command line?
+
