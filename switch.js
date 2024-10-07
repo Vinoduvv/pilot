@@ -1,117 +1,88 @@
 #!/bin/bash
 
-# Function to count occurrences of a pattern in a file
+# Function to count occurrences of a pattern in a string
 count_occurrences() {
-    grep -o "$1" "$2" | wc -l
+    echo "$1" | grep -o "$2" | wc -l
 }
 
-# Function to calculate file score based on file type
+# Function to calculate score based on file diff
 calculate_score() {
-    local filePath="$1"
-    local ext="${filePath##*.}"
+    local fileDiff="$1"
+    local ext="$2"
     local fileScore=1  # Start with a low score
 
-    echo "Analyzing $filePath..."
-
-    # Count the number of lines in the file
-    local lineCount=$(wc -l < "$filePath")
+    # Count the number of lines in the diff
+    local lineCount=$(echo "$fileDiff" | wc -l)
 
     # Check file extension and calculate score accordingly
     case "$ext" in
         js | jsx)
-            functionCount=$(count_occurrences "function\s\+\w\+" "$filePath")
-            classCount=$(count_occurrences "class\s\+\w\+" "$filePath")
-            arrowFunctionCount=$(count_occurrences "\(\w*\)\s*=>" "$filePath")
-            ifCount=$(count_occurrences "if\s*\(" "$filePath")
-            switchCount=$(count_occurrences "switch\s*\(" "$filePath")
-            loopCount=$(count_occurrences "for\s*\(|while\s*\(" "$filePath")
+            functionCount=$(count_occurrences "$fileDiff" "function\s\+\w\+")
+            classCount=$(count_occurrences "$fileDiff" "class\s\+\w\+")
+            ifCount=$(count_occurrences "$fileDiff" "if\s*\(")
+            switchCount=$(count_occurrences "$fileDiff" "switch\s*\(")
+            loopCount=$(count_occurrences "$fileDiff" "for\s*\(|while\s*\(")
 
-            # Add points based on occurrences of complex constructs
             (( fileScore += functionCount > 0 ? 5 : 0 ))
             (( fileScore += classCount > 0 ? 7 : 0 ))
             (( fileScore += ifCount > 0 || switchCount > 0 || loopCount > 0 ? 3 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "JS/JSX Score for $filePath: $fileScore"
             ;;
         
         css)
-            cssRuleCount=$(count_occurrences "\w\+\s*{" "$filePath")
-            mediaQueryCount=$(count_occurrences "@media" "$filePath")
+            cssRuleCount=$(count_occurrences "$fileDiff" "\w\+\s*{")
+            mediaQueryCount=$(count_occurrences "$fileDiff" "@media")
 
             (( fileScore += cssRuleCount > 0 ? 3 : 0 ))
             (( fileScore += mediaQueryCount > 0 ? 2 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "CSS Score for $filePath: $fileScore"
             ;;
-
+        
         html)
-            htmlTagCount=$(count_occurrences "<\w\+" "$filePath")
-            htmlAttrCount=$(count_occurrences "\w\+=\"[^\"]*\"" "$filePath")
+            htmlTagCount=$(count_occurrences "$fileDiff" "<\w\+")
+            htmlAttrCount=$(count_occurrences "$fileDiff" "\w\+=\"[^\"]*\"")
 
             (( fileScore += htmlTagCount > 0 ? 3 : 0 ))
             (( fileScore += htmlAttrCount > 0 ? 2 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "HTML Score for $filePath: $fileScore"
             ;;
-
+        
         json)
-            keyCount=$(jq 'keys | length' "$filePath")
-            nestedObjectCount=$(grep -o "{" "$filePath" | wc -l)
-            arrayCount=$(grep -o "\[" "$filePath" | wc -l)
-            fileSize=$(wc -c <"$filePath")
+            keyCount=$(echo "$fileDiff" | jq 'keys | length')
+            nestedObjectCount=$(count_occurrences "$fileDiff" "{")
+            arrayCount=$(count_occurrences "$fileDiff" "\[")
 
             (( fileScore += keyCount > 0 ? keyCount < 5 ? keyCount : 5 : 0 ))
-            (( fileScore += nestedObjectCount > 1 ? 3 : 0 ))  # Minus 1 for root
+            (( fileScore += nestedObjectCount > 1 ? 3 : 0 )) 
             (( fileScore += arrayCount > 0 ? 2 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "JSON Score for $filePath: $fileScore"
             ;;
-
+        
         sass | scss)
-            sassVariableCount=$(count_occurrences "\$[\w-]+" "$filePath")
-            sassMixinCount=$(count_occurrences "@mixin\s\+\w\+" "$filePath")
-            sassNestingCount=$(count_occurrences "^\s*\w\+\s*{" "$filePath")
+            sassVariableCount=$(count_occurrences "$fileDiff" "\$[\w-]+")
+            sassMixinCount=$(count_occurrences "$fileDiff" "@mixin\s\+\w\+")
+            sassNestingCount=$(count_occurrences "$fileDiff" "^\s*\w\+\s*{")
 
             (( fileScore += sassVariableCount > 0 ? 3 : 0 ))
             (( fileScore += sassMixinCount > 0 ? 3 : 0 ))
             (( fileScore += sassNestingCount > 0 ? 2 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "SASS/SCSS Score for $filePath: $fileScore"
             ;;
-
+        
         hbs)
-            hbsHelperCount=$(count_occurrences "{{\w\+" "$filePath")
-            hbsIfCount=$(count_occurrences "{{#if" "$filePath")
-            hbsLoopCount=$(count_occurrences "{{#each" "$filePath")
-            hbsCommentCount=$(count_occurrences "{{!--" "$filePath")
+            hbsHelperCount=$(count_occurrences "$fileDiff" "{{\w\+")
+            hbsIfCount=$(count_occurrences "$fileDiff" "{{#if")
+            hbsLoopCount=$(count_occurrences "$fileDiff" "{{#each")
 
             (( fileScore += hbsHelperCount > 0 ? 3 : 0 ))
             (( fileScore += hbsIfCount > 0 ? 2 : 0 ))
             (( fileScore += hbsLoopCount > 0 ? 2 : 0 ))
-
-            # Adjust score by line count
             (( fileScore += (lineCount / 5 < 2 ? lineCount / 5 : 2) ))
-
-            echo "HBS Score for $filePath: $fileScore"
             ;;
-
+        
         *)
-            echo "No scoring logic defined for file type: $filePath"
+            echo "No scoring logic defined for file type: $ext"
+            return 0
             ;;
     esac
 
@@ -122,7 +93,7 @@ calculate_score() {
         fileScore=1
     fi
 
-    echo "$filePath: Final Score = $fileScore"
+    echo "$ext:$fileScore"
 }
 
 # Check if a commit hash is provided
@@ -131,15 +102,57 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-# Get the list of changed files in the specified git commit
-changed_files=$(git diff --name-only "$1"^ "$1")
+# Initialize reporting variables
+declare -A totalFileTypeScores
+totalCommits=0
+totalFiles=0
 
-# Iterate over each changed file and calculate score
-echo "Changed files in commit $1:"
-for file in $changed_files; do
-    if [ -f "$file" ]; then
-        calculate_score "$file"
-    else
-        echo "File not found: $file"
-    fi
+# Get the list of commits
+commits=$(git rev-list --all)
+
+# Iterate through all commits
+for commit in $commits; do
+    # Get the list of changed files in the specified git commit
+    changed_files=$(git show --name-status "$commit")
+
+    # Increment total commits count
+    (( totalCommits++ ))
+
+    # Process each changed file
+    echo "Changed files in commit $commit:"
+    while IFS= read -r line; do
+        # Extract the file status and path
+        status=$(echo "$line" | awk '{print $1}')
+        file=$(echo "$line" | awk '{print $2}')
+
+        if [[ "$status" =~ ^[AM]$ ]]; then  # Only process Added or Modified files
+            if [ -f "$file" ]; then
+                # Get the diff for the changed file
+                fileDiff=$(git show "$commit:$file")
+                fileTypeScore=$(calculate_score "$fileDiff" "${file##*.}")
+
+                # Increment the total files count
+                (( totalFiles++ ))
+
+                # Extract the file type and score
+                fileType=$(echo "$fileTypeScore" | awk -F: '{print $1}')
+                score=$(echo "$fileTypeScore" | awk -F: '{print $2}')
+
+                # Accumulate scores by file type
+                (( totalFileTypeScores[$fileType] += score ))
+            else
+                echo "File not found: $file"
+            fi
+        fi
+    done <<< "$changed_files"
 done
+
+# Reporting
+echo "-------------------------------------"
+echo "Total Commits: $totalCommits"
+echo "Total Files: $totalFiles"
+echo "File Type Scores:"
+for type in "${!totalFileTypeScores[@]}"; do
+    echo "$type: ${totalFileTypeScores[$type]}"
+done
+echo "-------------------------------------"
