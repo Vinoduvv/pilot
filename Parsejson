@@ -1,0 +1,26 @@
+# Function to parse JSON without jq
+parse_json() {
+    local file="$1"
+    
+    # Check if file exists
+    if [[ ! -f "$file" ]]; then
+        echo "File not found: $file"
+        return 1
+    fi
+
+    # Extract key-value pairs
+    echo "Parsing JSON from $file:"
+    
+    # Read the file and extract keys and values
+    grep -o '"[^"]*": *"[^"]*"' "$file" | while IFS=': ' read -r key value; do
+        # Remove quotes from key and value
+        key=$(echo "$key" | tr -d '"')
+        value=$(echo "$value" | tr -d '"')
+        
+        echo "Key: $key, Value: $value"
+    done
+}
+
+# Example usage
+json_file="config.json"
+parse_json "$json_file"
