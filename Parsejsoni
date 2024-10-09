@@ -1,0 +1,47 @@
+
+# Declare an associative array for config and a regular array for strings
+declare -A config
+declare -a string_array
+
+# Function to parse JSON without jq and store in associative arrays
+parse_json() {
+    local file="$1"
+    
+    # Check if file exists
+    if [[ ! -f "$file" ]]; then
+        echo "File not found: $file"
+        return 1
+    fi
+
+    # Extract key-value pairs and store them in the associative array or array
+    while IFS=': ' read -r key value; do
+        # Remove quotes from key and value
+        key=$(echo "$key" | tr -d '"')
+        value=$(echo "$value" | tr -d '"')
+
+        # Check if value is an array (starting with [ and ending with ])
+        if [[ $value == \[* ]]; then
+            # Remove square brackets
+            value=${value:1:-1}
+            # Split the string into array elements by comma
+            IFS=',' read -r -a temp_array <<< "$value"
+            # Add elements to the string_array
+            for element in "${temp_array[@]}"; do
+                # Trim whitespace and quotes
+                element=$(echo "$element" | tr -d '"' | xargs)
+                string_array+=("$element")
+            done
+        else
+            config["$key"]="$value"  # Store in associative array
+        fi
+    done < <(grep -o '"[^"]*": *"[^"]*"\|\[[^]]*\]' "$file")  # Support for both key-value and array
+}
+
+# Example usage
+json_file="config.json"
+parse_json "$json_file"
+
+# Accessing the variables
+echo "API Key: ${config[API_KEY]}"
+echo "Environment: ${config[ENVIRONMENT]}"
+echo "String Array: ${string_array[@]}"
