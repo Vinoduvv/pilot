@@ -1,15 +1,11 @@
 #!/bin/bash
 # Vinod
 
-# List of authors
-authors=("vinod.anbalagan@test.com" "another.author@test.com")  # Add more authors as needed
-
-# Remote branch to analyze (example: origin/main)
-branch="origin/dev-2024.11.0"
-
-# Date range (can be customized)
-since="2024-07-01"
-until="2024-07-30"
+# Configuration Section
+config_authors=("vinod.anbalagan@test.com" "another.author@test.com")  # List of authors
+branch="origin/dev-2024.11.0"  # Remote branch to analyze
+since="2024-07-01"  # Start date
+until="2024-07-30"  # End date
 
 # Global arrays for file types complexity tracking
 javascript=()
@@ -131,11 +127,18 @@ analyze_complexity() {
     done
 }
 
-# Initialize the CSV file with headers
-echo "Author,Commit,Date,File,Extension,Complexity Level,Lines Changed" > "$output_file"
+# Initialize the CSV file with headers and config data
+{
+    echo "Configuration:"
+    echo "Authors: ${config_authors[*]}"
+    echo "Branch: $branch"
+    echo "Date Range: $since to $until"
+    echo ""
+    echo "Author,Commit,Date,File,Extension,Complexity Level,Lines Changed"
+} > "$output_file"
 
 # Loop over each author
-for author in "${authors[@]}"; do
+for author in "${config_authors[@]}"; do
     echo "Analyzing commits for author: $author"
 
     # Clear arrays before processing each author
