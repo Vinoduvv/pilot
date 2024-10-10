@@ -2,7 +2,7 @@
 # Vinod
 
 # List of authors
-authors=("vinod.anbalagan@test.com")
+authors=("vinod.anbalagan@test.com" "another.author@test.com")  # Add more authors as needed
 
 # Remote branch to analyze (example: origin/main)
 branch="origin/dev-2024.11.0"
@@ -17,6 +17,9 @@ hbstemplate=()
 cssfiles=()
 jsonfiles=()
 
+# Output CSV file
+output_file="complexity_report.csv"
+
 # Functions to add complexity scores to arrays
 add_js() { javascript+=("$1"); }
 add_json() { jsonfiles+=("$1"); }
@@ -25,7 +28,7 @@ add_css() { cssfiles+=("$1"); }
 
 # Print the collected complexity values
 print_values() {
-    echo "Printing Values...."
+    echo "Printing Values for Author: $1"
     echo "JavaScript Complexity Scores: ${javascript[@]}"
     echo "Handlebars Complexity Scores: ${hbstemplate[@]}"
     echo "CSS Complexity Scores: ${cssfiles[@]}"
@@ -35,6 +38,7 @@ print_values() {
 # Analyze complexity of commits
 analyze_complexity() {
     local commit=$1
+    local author=$2
 
     # Get the diff of the commit with file names
     diff=$(git show --pretty="" --unified=0 --name-only "$commit")
@@ -45,7 +49,10 @@ analyze_complexity() {
         return
     fi
 
-    echo "Analyzing commit $commit..."
+    # Get the commit date
+    commit_date=$(git show -s --format="%ci" "$commit")
+
+    echo "Analyzing commit $commit for author $author on $commit_date..."
     echo "Changed files: $diff"
 
     for file in $diff; do
@@ -57,76 +64,91 @@ analyze_complexity() {
         code_lines=$(echo "$file_diff" | grep '^[+-]' | grep -v '^+++' | wc -l) # Count added/removed lines
         
         echo "Analyzing file: $file (Type: $extension, Lines changed: $code_lines)"
+        
+        # Prepare for CSV output
+        score=0
+        complexity_level="Low"
 
         case "$extension" in
             js)
                 if echo "$file_diff" | grep -q -E "for|while|if|switch|function|=>|class|async|await|Promise|try|catch|throw"; then
-                    echo "$file: High Complexity (JS loops, classes, async, promises, try-catch detected)"
-                    add_js 3
+                    complexity_level="High"
+                    score=3
                 elif [ "$code_lines" -gt 20 ]; then
-                    echo "$file: Moderate Complexity (many lines changed in JS)"
-                    add_js 2
+                    complexity_level="Moderate"
+                    score=2
                 else
-                    echo "$file: Low Complexity (simple JS change)"
-                    add_js 1
+                    complexity_level="Low"
+                    score=1
                 fi
+                add_js "$score"
                 ;;
             hbs)
                 if echo "$file_diff" | grep -q "{{#each|{{#if|{{#with|{{#unless|{{partial|{{#custom-helper|{{#block-helper}}"; then
-                    echo "$file: High Complexity (complex Handlebars logic)"
-                    add_hbs 3
+                    complexity_level="High"
+                    score=3
                 elif [ "$code_lines" -gt 15 ]; then
-                    echo "$file: Moderate Complexity (many lines changed in HBS)"
-                    add_hbs 2
+                    complexity_level="Moderate"
+                    score=2
                 else
-                    echo "$file: Low Complexity (simple HBS change)"
-                    add_hbs 1
+                    complexity_level="Low"
+                    score=1
                 fi
+                add_hbs "$score"
                 ;;
             scss|sass)
                 if echo "$file_diff" | grep -q "@mixin|@include|@import|@for|@each|@while|&|extend"; then
-                    echo "$file: High Complexity (Sass mixins, includes, loops, imports, nesting detected)"
-                    add_css 3
+                    complexity_level="High"
+                    score=3
                 elif [ "$code_lines" -gt 15 ]; then
-                    echo "$file: Moderate Complexity (many lines changed in Sass)"
-                    add_css 2
+                    complexity_level="Moderate"
+                    score=2
                 else
-                    echo "$file: Low Complexity (simple Sass change)"
-                    add_css 1
+                    complexity_level="Low"
+                    score=1
                 fi
+                add_css "$score"
                 ;;
             json)
                 if [ "$code_lines" -gt 50 ]; then
-                    echo "$file: Moderate Complexity (large JSON change)"
-                    add_json 3
+                    complexity_level="Moderate"
+                    score=3
                 else
-                    echo "$file: Low Complexity (simple JSON change)"
-                    add_json 2
+                    complexity_level="Low"
+                    score=2
                 fi
+                add_json "$score"
                 ;;
             *)
                 echo "$file: File type not analyzed for complexity"
-                add_json 1
+                score=1
+                add_json "$score"
                 ;;
         esac
+        
+        # Save results to CSV, including commit date
+        echo "$author,$commit,$commit_date,$file,$extension,$complexity_level,$code_lines" >> "$output_file"
     done
 }
+
+# Initialize the CSV file with headers
+echo "Author,Commit,Date,File,Extension,Complexity Level,Lines Changed" > "$output_file"
 
 # Loop over each author
 for author in "${authors[@]}"; do
     echo "Analyzing commits for author: $author"
-
-    # Get the number of commits for the author on the specified remote branch within the date range
-    num_commits=$(git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=oneline --abbrev-commit | wc -l)
-    
-    # Print the number of commits
-    echo "Number of commits: $num_commits"
 
     # Clear arrays before processing each author
     javascript=()
     hbstemplate=()
     cssfiles=()
     jsonfiles=()
+
+    # Get the number of commits for the author on the specified remote branch within the date range
+    num_commits=$(git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=oneline --abbrev-commit | wc -l)
+    
+    # Print the number of commits
+    echo "Number of commits: $num_commits"
 
     # Get commit hashes and analyze complexity of each commit
     git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=format:"%h" | while read -r commit; do
@@ -146,9 +168,12 @@ for author in "${authors[@]}"; do
             continue
         fi
         
-        analyze_complexity "$commit"
+        analyze_complexity "$commit" "$author"
     done
+
+    # Print all complexity values collected for the author
+    print_values "$author"
 done
 
-# Print all complexity values collected
-print_values
+# Notify completion
+echo "Analysis complete. Results saved to $output_file."
