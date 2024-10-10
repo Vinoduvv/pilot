@@ -11,7 +11,7 @@ branch="origin/dev-2024.11.0"
 since="2024-07-01"
 until="2024-07-30"
 
-# Arrays for file types complexity tracking
+# Global arrays for file types complexity tracking
 javascript=()
 hbstemplate=()
 cssfiles=()
@@ -144,14 +144,15 @@ for author in "${authors[@]}"; do
     cssfiles=()
     jsonfiles=()
 
-    # Get the number of commits for the author on the specified remote branch within the date range
-    num_commits=$(git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=oneline --abbrev-commit | wc -l)
-    
+    # Get the commits for the author on the specified remote branch within the date range
+    commits=$(git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=format:"%h")
+
     # Print the number of commits
+    num_commits=$(echo "$commits" | wc -l)
     echo "Number of commits: $num_commits"
 
-    # Get commit hashes and analyze complexity of each commit
-    git log "$branch" --author="$author" --since="$since" --until="$until" --pretty=format:"%h" | while read -r commit; do
+    # Process each commit without using a pipe
+    while IFS= read -r commit; do
         # Check if commit is valid
         if ! git cat-file -e "$commit" 2>/dev/null; then
             echo "Invalid commit: $commit. Skipping."
@@ -169,7 +170,7 @@ for author in "${authors[@]}"; do
         fi
         
         analyze_complexity "$commit" "$author"
-    done
+    done <<< "$commits"  # Read commits here to avoid subshell
 
     # Print all complexity values collected for the author
     print_values "$author"
